@@ -1,0 +1,24 @@
+Changes
+inc/Module/AutoInstall.pm
+inc/Module/Install.pm
+inc/Module/Install/AutoInstall.pm
+inc/Module/Install/Base.pm
+inc/Module/Install/Can.pm
+inc/Module/Install/Fetch.pm
+inc/Module/Install/Include.pm
+inc/Module/Install/Makefile.pm
+inc/Module/Install/Metadata.pm
+inc/Module/Install/Win32.pm
+inc/Module/Install/WriteAll.pm
+lib/NetHack/Menu.pm
+Makefile.PL
+MANIFEST			This list of files
+META.yml
+README
+SIGNATURE
+t/000-load.t
+t/001-basic.t
+t/002-no-menu.t
+t/003-some-selected.t
+t/004-multipage.t
+t/005-start-at-middle.t
