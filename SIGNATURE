@@ -14,11 +14,11 @@ not run its Makefile.PL or Build.PL.
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA1
 
-SHA1 4ac203fae225da8f13036e1f1c3cf8d1aee5bd77 Changes
+SHA1 09e83cdbba8bac2a4289a1246939abf8bb736e12 Changes
 SHA1 c9f5a88912ab4e4e5e17fa8d017006abf8978bfa MANIFEST
-SHA1 eda1f894c648a70cf188c38a600a1d5c770d862f META.yml
+SHA1 addb61fd6954a7bf99a786861ea11b55ff053b80 META.yml
 SHA1 e529927c5632531481fa7a67ddc36f6a5cba61e4 Makefile.PL
-SHA1 a4544d2594a12598f935ca3e13df82b7856f2441 README
+SHA1 697e294a2cacb2eff1b62ca16e3f1e315ff7d425 README
 SHA1 603bb9de29fb8cba7f13409c546750972eff645d inc/Module/AutoInstall.pm
 SHA1 78edb89a439463e44c33a72bbee84c54d0dc8aaf inc/Module/Install.pm
 SHA1 ae32c02b539901de91f06366ce9bdbb7a7bd040b inc/Module/Install/AutoInstall.pm
@@ -30,17 +30,17 @@ SHA1 2054450e1e9c1dd8056362bf4a64ae70d5d71476 inc/Module/Install/Makefile.pm
 SHA1 5d6189b2cad15cf9932a28faafd55130c8247e83 inc/Module/Install/Metadata.pm
 SHA1 02af973fae2ac3531fa6b704574b2b8cb2a08148 inc/Module/Install/Win32.pm
 SHA1 3a2eab96e91cca8d99938cda7791759ae9d97b3a inc/Module/Install/WriteAll.pm
-SHA1 9b4d698ed5e4a2efa70c829c5b8877ce710e6527 lib/NetHack/Menu.pm
+SHA1 40b9bb7d9fb04ca2a62d7c8a5e0b29df51132d4e lib/NetHack/Menu.pm
 SHA1 61866bb300170fbb5bd27c5f2b072b4c0ca4fd1e t/000-load.t
-SHA1 b51e1b96aed71d0396e0fbde4a501640c7a01a76 t/001-basic.t
-SHA1 2910c6fb545fbdeb5a6d6fc0a5f7b3236a9d388a t/002-no-menu.t
+SHA1 8897d4963a288802ec405371c722438ae99c69f5 t/001-basic.t
+SHA1 543d368a15a69913ad60024bd66ae48fb2680065 t/002-no-menu.t
 SHA1 ed6a86ba1e65f099c6ea30c2128127f69448f6b8 t/003-some-selected.t
-SHA1 51f651ad4f72c4de683c8e48640ddc248af343e4 t/004-multipage.t
-SHA1 81445def7648e0726dbe9582a2f89c886d2b1cef t/005-start-at-middle.t
+SHA1 0c39334530f8e6b86dfe4048a571a0c78de00700 t/004-multipage.t
+SHA1 b280ff65609e6ac4a4f04ccadbabacf56f4cb260 t/005-start-at-middle.t
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1.4.7 (Darwin)
 
-iD8DBQFHZPu+sxfQtHhyRPoRAnJkAJ9RDVVSC0lSAiSFKz7RfAXmr03pGACfbdPq
-xJfYb5oTnsSoSX5F99HDdq0=
-=X0ud
+iD8DBQFHerAtsxfQtHhyRPoRAnixAJ0Uf/WV+YqGr7Fgw+UsxdV3aWRlAQCffLFw
+joiUW5BB8C+kIRoKH0KeO6E=
+=V0/u
 -----END PGP SIGNATURE-----

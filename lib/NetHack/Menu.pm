@@ -25,6 +25,23 @@ has pages => (
     default => sub { [] },
 );
 
+sub has_menu {
+    my $self = shift;
+    for (0 .. $self->rows) {
+        if ($self->row_plaintext($_) =~ /\((end|(\d+) of (\d+))\)\s*$/) {
+            my ($current, $max) = ($2, $3);
+            ($current, $max) = (1, 1) if ($1||'') eq 'end';
+
+            # this may happen if someone is trying to screw with us and gives
+            # us a page number or page count of 0
+            next unless $current && $max;
+
+            return 1;
+        }
+    }
+    return 0;
+}
+
 sub at_end {
     my $self = shift;
 
@@ -158,11 +175,11 @@ NetHack::Menu - interact with NetHack's menus
 
 =head1 VERSION
 
-Version 0.01 released 16 Dec 07
+Version 0.02 released 01 Jan 07
 
 =cut
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 =head1 SYNOPSIS
 
@@ -199,10 +216,16 @@ the code given in the Synopsis.
 Takes a L<Term::VT102> (or a behaving subclass, such as
 L<Term::VT102::Boundless> or L<Term::VT102::ZeroBased>).
 
+=head2 has_menu -> Bool
+
+Is there currently a menu on the screen?
+
 =head2 at_end -> Bool
 
 This will return whether we've finished compiling the menu. This must be
 called for each page because this is what does all the compilation.
+
+Note that if there's no menu, this will C<croak>.
 
 =head2 next -> Str
 
