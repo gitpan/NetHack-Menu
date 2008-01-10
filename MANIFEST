@@ -22,3 +22,8 @@ t/002-no-menu.t
 t/003-some-selected.t
 t/004-multipage.t
 t/005-start-at-middle.t
+t/006-noselect.t
+t/007-single-select.t
+t/008-single-select-paged.t
+t/009-single-select-none.t
+t/010-enhance.t

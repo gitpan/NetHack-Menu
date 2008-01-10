@@ -1,6 +1,7 @@
 #!perl
 package NetHack::Menu;
 use Moose;
+use Moose::Util::TypeConstraints;
 
 has vt => (
     is       => 'rw',
@@ -23,6 +24,13 @@ has pages => (
     is      => 'rw',
     isa     => 'ArrayRef[ArrayRef]',
     default => sub { [] },
+);
+
+enum 'NetHackMenuSelectCount' => qw(none single multi);
+has select_count => (
+    is      => 'rw',
+    isa     => 'NetHackMenuSelectCount',
+    default => 'multi',
 );
 
 sub has_menu {
@@ -65,7 +73,7 @@ sub at_end {
         or Carp::croak "Unable to parse a menu.";
 
     for (1 .. $self->page_count) {
-        if (@{ $self->pages->[$_] || [] } == 0) {
+        if (!defined($self->pages->[$_])) {
             return 0;
         }
     }
@@ -79,10 +87,11 @@ sub parse_current_page {
     my $end_row   = shift;
 
     # have we already parsed this one?
+    return if defined $self->pages->[ $self->page_number ];
     my $page = $self->pages->[ $self->page_number ] ||= [];
-    return if @$page;
 
-    my $re = qr/^(?:.{$start_col})(.) ([-+]) (.*?)\s*$/;
+    # extra space is for #enhance
+    my $re = qr/^(?:.{$start_col})(.)  ?([-+]) (.*?)\s*$/;
     for (0 .. $end_row - 1) {
         next unless $self->row_plaintext($_) =~ $re;
         my ($selector, $selected, $name) = ($1, $2 eq '+', $3);
@@ -94,8 +103,6 @@ sub parse_current_page {
             $selected,
         ];
     }
-
-    confess "Unable to parse the current menu page." if !@$page;
 }
 
 sub next {
@@ -155,7 +162,37 @@ sub deselect {
     }
 }
 
-sub commit {
+# we're just here to look, we promise not to break anything
+sub _commit_none {
+    my $self = shift;
+
+    return '^'
+         . '>' x (@{ $self->pages }-1)
+         . ' ';
+}
+
+# stop as soon as we've got the first item to select
+sub _commit_single {
+    my $self = shift;
+    my $out = '^';
+    my $skip_first = 0;
+
+    for (@{ $self->pages }) {
+        next if $skip_first++ == 0;
+
+        for (@{ $_ || [] }) {
+            if ($_->[2]) {
+                return $out . $_->[1];
+            }
+        }
+        $out .= '>';
+    }
+
+    return $out . ' ';
+}
+
+# everything and anything, baby
+sub _commit_multi {
     my $self = shift;
 
     my @pages = map {
@@ -169,17 +206,23 @@ sub commit {
     return '^' . join('>', @pages) . ' ';
 }
 
+sub commit {
+    my $self = shift;
+    my $method = '_commit_' . $self->select_count;
+    $self->$method();
+}
+
 =head1 NAME
 
 NetHack::Menu - interact with NetHack's menus
 
 =head1 VERSION
 
-Version 0.03 released 07 Dec 08
+Version 0.04 released 09 Dec 07
 
 =cut
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 =head1 SYNOPSIS
 
@@ -211,10 +254,17 @@ the code given in the Synopsis.
 
 =head1 METHODS
 
-=head2 new (vt => L<Term::VT102>) -> C<NetHack::Menu>
+=head2 new (vt => L<Term::VT102>, select_count => (none|single|multi)) -> C<NetHack::Menu>
 
 Takes a L<Term::VT102> (or a behaving subclass, such as
-L<Term::VT102::Boundless> or L<Term::VT102::ZeroBased>).
+L<Term::VT102::Boundless> or L<Term::VT102::ZeroBased>). Also takes an optional
+C<select_count> which determines the type of menu. C<NetHack::Menu> cannot
+intuit it by itself, it depends on the application to know what it is dealing
+with. Default: C<multi>.
+
+=head2 select_count [none|single|multi] -> (none|single|multi)
+
+Accessor for C<select_count>. Default: C<multi>.
 
 =head2 has_menu -> Bool
 
