@@ -26,17 +26,31 @@ has pages => (
     default => sub { [] },
 );
 
-enum 'NetHackMenuSelectCount' => qw(none single multi);
+enum 'NetHackMenuSelectCount' => qw(single multi);
 has select_count => (
     is      => 'rw',
     isa     => 'NetHackMenuSelectCount',
     default => 'multi',
 );
 
+has cache => (
+    is      => 'rw',
+    isa     => 'ArrayRef[ArrayRef[Str]]',
+    default => sub { [] },
+);
+
+has noselect_x => (
+    is      => 'rw',
+    isa     => 'ArrayRef[Int]',
+    default => sub { [] },
+);
+
 sub has_menu {
     my $self = shift;
+
     for (0 .. $self->rows) {
         if (($self->row_plaintext($_)||'') =~ /\((end|(\d+) of (\d+))\)\s*$/) {
+
             my ($current, $max) = ($2, $3);
             ($current, $max) = (1, 1) if ($1||'') eq 'end';
 
@@ -162,15 +176,6 @@ sub deselect {
     }
 }
 
-# we're just here to look, we promise not to break anything
-sub _commit_none {
-    my $self = shift;
-
-    return '^'
-         . '>' x (@{ $self->pages }-1)
-         . ' ';
-}
-
 # stop as soon as we've got the first item to select
 sub _commit_single {
     my $self = shift;
@@ -218,11 +223,11 @@ NetHack::Menu - interact with NetHack's menus
 
 =head1 VERSION
 
-Version 0.04 released 09 Dec 07
+Version 0.05 released 23 Mar 08
 
 =cut
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 =head1 SYNOPSIS
 
@@ -254,7 +259,7 @@ the code given in the Synopsis.
 
 =head1 METHODS
 
-=head2 new (vt => L<Term::VT102>, select_count => (none|single|multi)) -> C<NetHack::Menu>
+=head2 new (vt => L<Term::VT102>, select_count => (single|multi)) -> C<NetHack::Menu>
 
 Takes a L<Term::VT102> (or a behaving subclass, such as
 L<Term::VT102::Boundless> or L<Term::VT102::ZeroBased>). Also takes an optional
@@ -262,9 +267,11 @@ C<select_count> which determines the type of menu. C<NetHack::Menu> cannot
 intuit it by itself, it depends on the application to know what it is dealing
 with. Default: C<multi>.
 
-=head2 select_count [none|single|multi] -> (none|single|multi)
+=head2 select_count [single|multi] -> (single|multi)
 
 Accessor for C<select_count>. Default: C<multi>.
+
+WARNING: No-select menus are potentially ambiguous with --More--. See below.
 
 =head2 has_menu -> Bool
 
@@ -329,9 +336,30 @@ Shawn M Moore, C<< <sartak at gmail.com> >>
 
 =head1 BUGS
 
-No known bugs.
+=head2 No-select menus
 
-Please report any bugs through RT: email
+Unfortunately, NetHack uses the string C<--More--> to indicate a no-select
+menu. This is ambiguous with a list of messages that spills over onto another
+"page".
+
+The expected way to handle no-select menus is to:
+
+=over 4
+
+=item Look at the topline
+
+=item Decide if the topline is a no-select menu
+
+This can be done by looking to see if it contains, for example, "Discoveries".
+Note that "Things that are here" can appear on the third line. Argh!
+
+=item If so, use NetHack::Menu
+
+=item Otherwise, hit space
+
+=back
+
+Please report any other bugs through RT: email
 C<bug-nethack-menu at rt.cpan.org>, or browse
 L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=NetHack-Menu>.
 
