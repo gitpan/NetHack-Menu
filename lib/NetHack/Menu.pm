@@ -105,10 +105,11 @@ sub parse_current_page {
     my $page = $self->pages->[ $self->page_number ] ||= [];
 
     # extra space is for #enhance
-    my $re = qr/^(?:.{$start_col})(.)  ?([-+]) (.*?)\s*$/;
+    my $re = qr/^(?:.{$start_col})(.)  ?([-+#]) (.*?)\s*$/;
     for (0 .. $end_row - 1) {
         next unless $self->row_plaintext($_) =~ $re;
-        my ($selector, $selected, $name) = ($1, $2 eq '+', $3);
+        my ($selector, $name) = ($1, $3);
+        my $selected = $2 eq '+' ? 'all' : $2 eq '#' ? -1 : 0;
 
         push @$page, [
             $name,
@@ -152,9 +153,25 @@ sub select {
             $code->($selector);
         };
 
-        if ($select && !$selected) {
-            $_->[2] = 1;
+        if ($select && $selected ne 'all') {
+            $_->[2] = 'all';
         }
+    }
+}
+
+sub select_quantity {
+    my $self = shift;
+    my $code = shift;
+
+    for (map { @{ $_ || [] } } @{ $self->pages }) {
+        my ($name, $selector, $selected, $started_selected) = @$_;
+
+        my $select = do {
+            local $_ = $name;
+            $code->($selector);
+        };
+
+        $_->[2] = defined($select) ? $select : $_->[2];
     }
 }
 
@@ -202,7 +219,11 @@ sub _commit_multi {
 
     my @pages = map {
         join '', map {
-            $_->[2] != $_->[3] ? $_->[1] : '';
+            ($_->[2] eq $_->[3]                ) ? ''                 :
+            ($_->[2] eq 0                      ) ? $_->[1]            :
+            ($_->[2] eq 'all'   && $_->[3] ne 0) ? ($_->[1] x 2)      :
+            ($_->[2] eq 'all'                  ) ? $_->[1]            :
+                                                   ($_->[2] . $_->[1]);
         } @{ $_ || [] }
     } @{ $self->pages };
 
@@ -223,11 +244,11 @@ NetHack::Menu - interact with NetHack's menus
 
 =head1 VERSION
 
-Version 0.05 released 23 Mar 08
+Version 0.06 released Jan 2009
 
 =cut
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 =head1 SYNOPSIS
 
@@ -304,6 +325,12 @@ finishing the menu with C<< $menu->commit >>.
 Do note that selecting is not the same as toggling.
 
 This currently returns no useful value.
+
+=head2 select_quantity Code
+
+Same as select, but instead of returning a truth value the coderef should
+return undef (if no change is to be made for this item), a non-negative integer
+(to select a specific amount), or the special string 'all'.
 
 =head2 deselect Code
 
