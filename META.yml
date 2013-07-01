@@ -1,13 +1,16 @@
 ---
-abstract: 'interact with NetHack''s menus'
+abstract: 'parse and interact with a NetHack menu'
 author:
-  - 'Shawn M Moore, C<< <sartak at gmail.com> >>'
+  - 'Shawn M Moore, C<sartak@gmail.com>'
 build_requires:
-  Test::Exception: 0
-  Test::MockObject: 0
-  Test::More: 0
+  ExtUtils::MakeMaker: 6.36
+  Test::Deep: 0
+  Test::Fatal: 0
+configure_requires:
+  ExtUtils::MakeMaker: 6.36
 distribution_type: module
-generated_by: 'Module::Install version 0.77'
+dynamic_config: 1
+generated_by: 'Module::Install version 1.06'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -20,5 +23,7 @@ no_index:
 requires:
   Moose: 0
 resources:
+  homepage: https://github.com/TAEB/NetHack-Menu/tree
   license: http://dev.perl.org/licenses/
-version: 0.06
+  repository: git://github.com/TAEB/NetHack-Menu.git
+version: 0.07

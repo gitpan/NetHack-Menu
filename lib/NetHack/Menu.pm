@@ -1,55 +1,57 @@
-#!perl
 package NetHack::Menu;
 use Moose;
-use Moose::Util::TypeConstraints;
+use Moose::Util::TypeConstraints 'enum';
+use NetHack::Menu::Item;
+
+our $VERSION = '0.07';
 
 has vt => (
     is       => 'rw',
     isa      => 'Term::VT102',
     required => 1,
-    handles  => ['row_plaintext', 'rows'],
+    handles  => {
+        _row_plaintext => 'row_plaintext',
+        _vt_rows       => 'rows',
+    },
 );
 
-has page_number => (
+has _page_number => (
     is      => 'rw',
     isa     => 'Int',
 );
 
-has page_count => (
+has _page_count => (
     is      => 'rw',
     isa     => 'Int',
 );
 
-has pages => (
+has _pages => (
     is      => 'rw',
-    isa     => 'ArrayRef[ArrayRef]',
+    isa     => 'ArrayRef[ArrayRef[NetHack::Menu::Item]]',
     default => sub { [] },
 );
 
-enum 'NetHackMenuSelectCount' => qw(single multi);
 has select_count => (
     is      => 'rw',
-    isa     => 'NetHackMenuSelectCount',
+    isa     => (enum['single', 'multi']),
     default => 'multi',
 );
 
-has cache => (
-    is      => 'rw',
-    isa     => 'ArrayRef[ArrayRef[Str]]',
+has extra_rows => (
+    traits  => ['Array'],
+    isa     => 'ArrayRef[Str]',
     default => sub { [] },
-);
-
-has noselect_x => (
-    is      => 'rw',
-    isa     => 'ArrayRef[Int]',
-    default => sub { [] },
+    handles => {
+        extra_rows     => 'elements',
+        _add_extra_row => 'push',
+    },
 );
 
 sub has_menu {
     my $self = shift;
 
-    for (0 .. $self->rows) {
-        if (($self->row_plaintext($_)||'') =~ /\((end|(\d+) of (\d+))\)\s*$/) {
+    for (0 .. $self->_vt_rows) {
+        if (($self->_row_plaintext($_)||'') =~ /\((end|(\d+) of (\d+))\)\s*$/) {
 
             my ($current, $max) = ($2, $3);
             ($current, $max) = (1, 1) if ($1||'') eq 'end';
@@ -67,8 +69,8 @@ sub has_menu {
 sub at_end {
     my $self = shift;
 
-    for (0 .. $self->rows) {
-        if (($self->row_plaintext($_)||'') =~ /^(.*)\((end|(\d+) of (\d+))\)\s*$/) {
+    for (0 .. $self->_vt_rows) {
+        if (($self->_row_plaintext($_)||'') =~ /^(.*)\((end|(\d+) of (\d+))\)\s*$/) {
             my ($current, $max) = ($3, $4);
             ($current, $max) = (1, 1) if ($2||'') eq 'end';
 
@@ -76,18 +78,18 @@ sub at_end {
             # us a page number or page count of 0
             next unless $current && $max;
 
-            $self->page_number($current);
-            $self->page_count($max);
-            $self->parse_current_page(length($1), $_);
+            $self->_page_number($current);
+            $self->_page_count($max);
+            $self->_parse_current_page(length($1), $_);
             last;
         }
     }
 
-    defined($self->page_number)
+    defined($self->_page_number)
         or Carp::croak "Unable to parse a menu.";
 
-    for (1 .. $self->page_count) {
-        if (!defined($self->pages->[$_])) {
+    for (1 .. $self->_page_count) {
+        if (!defined($self->_pages->[$_])) {
             return 0;
         }
     }
@@ -95,28 +97,52 @@ sub at_end {
     return 1;
 }
 
-sub parse_current_page {
+sub _parse_current_page {
     my $self      = shift;
     my $start_col = shift;
     my $end_row   = shift;
 
     # have we already parsed this one?
-    return if defined $self->pages->[ $self->page_number ];
-    my $page = $self->pages->[ $self->page_number ] ||= [];
+    return if defined $self->_pages->[ $self->_page_number ];
+    my $page = $self->_pages->[ $self->_page_number ] ||= [];
 
     # extra space is for #enhance
     my $re = qr/^(?:.{$start_col})(.)  ?([-+#]) (.*?)\s*$/;
     for (0 .. $end_row - 1) {
-        next unless $self->row_plaintext($_) =~ $re;
-        my ($selector, $name) = ($1, $3);
-        my $selected = $2 eq '+' ? 'all' : $2 eq '#' ? -1 : 0;
+        my $text = $self->_row_plaintext($_);
+        if ($text =~ $re) {
+            my ($selector, $sigil, $name) = ($1, $2, $3);
+            my $quantity;
+            my $selected;
 
-        push @$page, [
-            $name,
-            $selector,
-            $selected,
-            $selected,
-        ];
+            if ($sigil eq '+') {
+                $selected = 1;
+                $quantity = 'all';
+            }
+            elsif ($sigil eq '-') {
+                $selected = 0;
+                $quantity = 0;
+            }
+            elsif ($sigil eq '#') {
+                $selected = 1;
+                # unknown selected quantity, leave it undef
+            }
+            else {
+                confess "Unknown sigil $sigil";
+            }
+
+            my $item = NetHack::Menu::Item->new(
+                description => $name,
+                selector    => $selector,
+                selected    => $selected,
+                (defined($quantity) ? (quantity => $quantity) : ()),
+            );
+
+            push @$page, $item;
+        }
+        else {
+            $self->_add_extra_row($text);
+        }
     }
 }
 
@@ -124,16 +150,16 @@ sub next {
     my $self = shift;
 
     # look for the first page after the current page that hasn't been parsed
-    for ($self->page_number + 1 .. $self->page_count) {
-        if (@{ $self->pages->[$_] || [] } == 0) {
-            return join '', map {'>'} $self->page_number + 1 .. $_;
+    for ($self->_page_number + 1 .. $self->_page_count) {
+        if (@{ $self->_pages->[$_] || [] } == 0) {
+            return join '', map {'>'} $self->_page_number + 1 .. $_;
         }
     }
 
     # now look for any pages we may have missed at the beginning
-    for (1 .. $self->page_number - 1) {
-        if (@{ $self->pages->[$_] || [] } == 0) {
-            return '^' . join '', map {'>'} $self->page_number + 1 .. $_;
+    for (1 .. $self->_page_number - 1) {
+        if (@{ $self->_pages->[$_] || [] } == 0) {
+            return '^' . join '', map {'>'} $self->_page_number + 1 .. $_;
         }
     }
 
@@ -142,53 +168,58 @@ sub next {
 }
 
 sub select {
-    my $self = shift;
-    my $code = shift;
+    my $self      = shift;
+    my $predicate = shift;
 
-    for (map { @{ $_ || [] } } @{ $self->pages }) {
-        my ($name, $selector, $selected, $started_selected) = @$_;
-
+    for my $item ($self->all_items) {
         my $select = do {
-            local $_ = $name;
-            $code->($selector);
+            local $_ = $item->description;
+            $predicate->($item);
         };
 
-        if ($select && $selected ne 'all') {
-            $_->[2] = 'all';
+        if ($select) {
+            $item->selected(1);
+            $item->quantity('all');
         }
     }
 }
 
 sub select_quantity {
-    my $self = shift;
-    my $code = shift;
+    my $self      = shift;
+    my $predicate = shift;
 
-    for (map { @{ $_ || [] } } @{ $self->pages }) {
-        my ($name, $selector, $selected, $started_selected) = @$_;
-
-        my $select = do {
-            local $_ = $name;
-            $code->($selector);
+    for my $item ($self->all_items) {
+        my $quantity = do {
+            local $_ = $item->description;
+            $predicate->($item);
         };
 
-        $_->[2] = defined($select) ? $select : $_->[2];
+        next if !defined($quantity);
+
+        $item->quantity($quantity);
+
+        if ($quantity) {
+            $item->selected(1);
+        }
+        else {
+            $item->selected(0);
+        }
     }
 }
 
 sub deselect {
-    my $self = shift;
-    my $code = shift;
+    my $self      = shift;
+    my $predicate = shift;
 
-    for (map { @{ $_ || [] } } @{ $self->pages }) {
-        my ($name, $selector, $selected, $started_selected) = @$_;
-
+    for my $item ($self->all_items) {
         my $deselect = do {
-            local $_ = $name;
-            $code->($selector);
+            local $_ = $item->description;
+            $predicate->($item);
         };
 
-        if ($deselect && $selected) {
-            $_->[2] = 0;
+        if ($deselect) {
+            $item->selected(0);
+            $item->quantity(0);
         }
     }
 }
@@ -199,17 +230,18 @@ sub _commit_single {
     my $out = '^';
     my $skip_first = 0;
 
-    for (@{ $self->pages }) {
+    for (@{ $self->_pages }) {
         next if $skip_first++ == 0;
 
-        for (@{ $_ || [] }) {
-            if ($_->[2]) {
-                return $out . $_->[1];
+        for my $item (@$_) {
+            if ($item->selected) {
+                return $out . $item->selector;
             }
         }
         $out .= '>';
     }
 
+    chop $out; # useless >
     return $out . ' ';
 }
 
@@ -217,19 +249,21 @@ sub _commit_single {
 sub _commit_multi {
     my $self = shift;
 
-    my @pages = map {
-        join '', map {
-            ($_->[2] eq $_->[3]                ) ? ''                 :
-            ($_->[2] eq 0                      ) ? $_->[1]            :
-            ($_->[2] eq 'all'   && $_->[3] ne 0) ? ($_->[1] x 2)      :
-            ($_->[2] eq 'all'                  ) ? $_->[1]            :
-                                                   ($_->[2] . $_->[1]);
-        } @{ $_ || [] }
-    } @{ $self->pages };
+    my $out = '^';
 
-    shift @pages; # there is no page 0
+    for my $i (1 .. $self->_page_count) {
+        for my $item (@{ $self->_pages->[$i] }) {
+            my $item_commands = $item->commit
+                or next;
 
-    return '^' . join('>', @pages) . ' ';
+            $out .= $item_commands;
+        }
+
+        $out .= '>';
+    }
+
+    chop $out; # useless >
+    return $out . ' ';
 }
 
 sub commit {
@@ -238,17 +272,18 @@ sub commit {
     $self->$method();
 }
 
+sub all_items {
+    my $self = shift;
+    return map { @{ $_ || [] } } @{ $self->_pages };
+}
+
+1;
+
+__END__
+
 =head1 NAME
 
-NetHack::Menu - interact with NetHack's menus
-
-=head1 VERSION
-
-Version 0.06 released Jan 2009
-
-=cut
-
-our $VERSION = '0.06';
+NetHack::Menu - parse and interact with a NetHack menu
 
 =head1 SYNOPSIS
 
@@ -357,9 +392,11 @@ something. This will be added on an if-needed basis. Anyone?
 
 =back
 
-=head1 AUTHOR
+=head1 AUTHORS
 
-Shawn M Moore, C<< <sartak at gmail.com> >>
+Shawn M Moore, C<sartak@gmail.com>
+
+Stefan O'Rear, C<stefanor@cox.net>
 
 =head1 BUGS
 
@@ -386,46 +423,12 @@ Note that "Things that are here" can appear on the third line. Argh!
 
 =back
 
-Please report any other bugs through RT: email
-C<bug-nethack-menu at rt.cpan.org>, or browse
-L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=NetHack-Menu>.
-
-=head1 SUPPORT
-
-You can find this documentation for this module with the perldoc command.
-
-    perldoc NetHack::Menu
-
-You can also look for information at:
-
-=over 4
-
-=item * AnnoCPAN: Annotated CPAN documentation
-
-L<http://annocpan.org/dist/NetHack-Menu>
-
-=item * CPAN Ratings
-
-L<http://cpanratings.perl.org/d/NetHack-Menu>
-
-=item * RT: CPAN's request tracker
-
-L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=NetHack-Menu>
-
-=item * Search CPAN
-
-L<http://search.cpan.org/dist/NetHack-Menu>
-
-=back
-
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2007 Shawn M Moore.
+Copyright 2007-2009 Shawn M Moore.
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
 
 =cut
-
-1;
 

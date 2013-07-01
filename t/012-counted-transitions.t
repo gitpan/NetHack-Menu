@@ -1,26 +1,16 @@
-#!perl -T
 use strict;
 use warnings;
-use Test::More tests => 3;
-use Test::MockObject;
-use Test::Exception;
+use lib 't/lib';
+use MockVT;
 
-use NetHack::Menu;
+use Test::More;
+use Test::Fatal;
+use Test::Deep;
 
-my @rows_returned;
-sub row_plaintext {
-    my $self = shift;
-    shift @rows_returned;
-}
-
-my $vt = Test::MockObject->new;
-$vt->mock(row_plaintext => \&row_plaintext);
-$vt->set_always(rows => 24);
-$vt->set_isa('Term::VT102');
-
+my $vt = MockVT->new;
 my $menu = NetHack::Menu->new(vt => $vt);
 
-push @rows_returned, split /\n/, (<< 'MENU') x 3;
+$vt->return_rows(split /\n/, (<< 'MENU') x 3);
                      Weapons
                      a - 1A
                      b + 1B
@@ -46,3 +36,5 @@ $menu->select_quantity(sub {
 });
 
 is($menu->commit, '^ef5g5h5ijll ', "menu commit handles all combinations");
+
+done_testing;

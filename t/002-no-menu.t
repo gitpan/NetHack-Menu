@@ -1,39 +1,38 @@
-#!perl -T
 use strict;
 use warnings;
-use Test::More tests => 12;
-use Test::MockObject;
-use Test::Exception;
+use lib 't/lib';
+use MockVT;
 
-use NetHack::Menu;
+use Test::More;
+use Test::Fatal;
+use Test::Deep;
 
-my $vt = Test::MockObject->new;
-$vt->set_always(rows => 24);
-$vt->set_isa('Term::VT102');
-
+my $vt = MockVT->new;
 my $menu = NetHack::Menu->new(vt => $vt);
 
-$vt->set_always(row_plaintext => (' ' x 80));
+$vt->return_rows((' ' x 80));
 ok(!$menu->has_menu, "has_menu reports no menu");
-throws_ok { $menu->at_end } qr/Unable to parse a menu/;
+like(exception { $menu->at_end }, qr/Unable to parse a menu/);
 
-$vt->set_always(row_plaintext => '(end) or is it?');
+$vt->return_rows('(end) or is it?');
 ok(!$menu->has_menu, "has_menu reports no menu");
-throws_ok { $menu->at_end } qr/Unable to parse a menu/;
+like(exception { $menu->at_end }, qr/Unable to parse a menu/);
 
-$vt->set_always(row_plaintext => '(1 of 1) but we make sure to check for \s*$');
+$vt->return_rows('(1 of 1) but we make sure to check for \s*$');
 ok(!$menu->has_menu, "has_menu reports no menu");
-throws_ok { $menu->at_end } qr/Unable to parse a menu/;
+like(exception { $menu->at_end }, qr/Unable to parse a menu/);
 
-$vt->set_always(row_plaintext => '            (-1 of 1)   ');
+$vt->return_rows('            (-1 of 1)   ');
 ok(!$menu->has_menu, "has_menu reports no menu");
-throws_ok { $menu->at_end } qr/Unable to parse a menu/;
+like(exception { $menu->at_end }, qr/Unable to parse a menu/);
 
-$vt->set_always(row_plaintext => '            (0 of 1)');
+$vt->return_rows('            (0 of 1)');
 ok(!$menu->has_menu, "has_menu reports no menu");
-throws_ok { $menu->at_end } qr/Unable to parse a menu/;
+like(exception { $menu->at_end }, qr/Unable to parse a menu/);
 
-$vt->set_always(row_plaintext => '            (1 of 0)');
+$vt->return_rows('            (1 of 0)');
 ok(!$menu->has_menu, "has_menu reports no menu");
-throws_ok { $menu->at_end } qr/Unable to parse a menu/;
+like(exception { $menu->at_end }, qr/Unable to parse a menu/);
+
+done_testing;
 

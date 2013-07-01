@@ -39,42 +39,13 @@ ok($menu->at_end, "NOW we're at the end");
 $vt->checked_ok([0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4], "rows 0-5 checked for finding the end, 0-4 checked for items");
 ok(exception { $menu->next }, "next dies if menu->at_end");
 
-my @items;
-$menu->select(sub {
-    push @items, shift;
-    0;
-});
+for my $item ($menu->all_items) {
+    if ($item->description =~ /marker/) {
+        $item->selected(1);
+    }
+}
 
-cmp_deeply(
-    \@items,
-    [
-        methods(
-            description          => "a blessed +1 quarterstaff (weapon in hands)",
-            selector             => 'a',
-            _originally_selected => 0,
-            _original_quantity   => 0,
-        ),
-        methods(
-            description          => "an uncursed +0 cloak of magic resistance (being worn)",
-            selector             => 'X',
-            _originally_selected => 0,
-            _original_quantity   => 0,
-        ),
-        methods(
-            description          => "a wand of enlightenment (0:12)",
-            selector             => 'c',
-            _originally_selected => 0,
-            _original_quantity   => 0,
-        ),
-        methods(
-            description          => "a magic marker (0:91)",
-            selector             => 'n',
-            _originally_selected => 0,
-            _original_quantity   => 0,
-        ),
-    ],
-);
-
-is($menu->commit, '^> ', "select nothing, even though we want to");
+is($menu->commit, '^>n', "select the last thing on the last page, which exits the menu");
 
 done_testing;
+
