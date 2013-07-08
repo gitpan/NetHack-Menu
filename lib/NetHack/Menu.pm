@@ -1,9 +1,14 @@
 package NetHack::Menu;
+BEGIN {
+  $NetHack::Menu::AUTHORITY = 'cpan:SARTAK';
+}
+{
+  $NetHack::Menu::VERSION = '0.08';
+}
 use Moose;
 use Moose::Util::TypeConstraints 'enum';
 use NetHack::Menu::Item;
-
-our $VERSION = '0.07';
+# ABSTRACT: parse and interact with a NetHack menu
 
 has vt => (
     is       => 'rw',
@@ -227,13 +232,11 @@ sub deselect {
 # stop as soon as we've got the first item to select
 sub _commit_single {
     my $self = shift;
-    my $out = '^';
-    my $skip_first = 0;
+    my $out = '';
+    $out .= '^' if $self->_page_number != 1;
 
-    for (@{ $self->_pages }) {
-        next if $skip_first++ == 0;
-
-        for my $item (@$_) {
+    for my $i (1 .. $self->_page_count) {
+        for my $item (@{ $self->_pages->[$i] }) {
             if ($item->selected) {
                 return $out . $item->selector;
             }
@@ -249,7 +252,8 @@ sub _commit_single {
 sub _commit_multi {
     my $self = shift;
 
-    my $out = '^';
+    my $out = '';
+    $out .= '^' if $self->_page_number != 1;
 
     for my $i (1 .. $self->_page_count) {
         for my $item (@{ $self->_pages->[$i] }) {
@@ -277,13 +281,24 @@ sub all_items {
     return map { @{ $_ || [] } } @{ $self->_pages };
 }
 
+sub selected_items {
+    my $self = shift;
+    return grep { $_->selected } $self->all_items;
+}
+
 1;
 
 __END__
 
+=pod
+
 =head1 NAME
 
 NetHack::Menu - parse and interact with a NetHack menu
+
+=head1 VERSION
+
+version 0.08
 
 =head1 SYNOPSIS
 
@@ -340,6 +355,14 @@ called for each page because this is what does all the compilation.
 
 Note that if there's no menu, this will C<croak>.
 
+=head2 all_items -> [ NetHack::Menu::Item ]
+
+Returns all items in the menu.
+
+=head2 selected_items -> [ NetHack::Menu::Item ]
+
+Returns all selected items in the menu.
+
 =head2 next -> Str
 
 Returns the string to be used to get to the next page. Note that you should
@@ -392,12 +415,6 @@ something. This will be added on an if-needed basis. Anyone?
 
 =back
 
-=head1 AUTHORS
-
-Shawn M Moore, C<sartak@gmail.com>
-
-Stefan O'Rear, C<stefanor@cox.net>
-
 =head1 BUGS
 
 =head2 No-select menus
@@ -423,12 +440,25 @@ Note that "Things that are here" can appear on the third line. Argh!
 
 =back
 
+=head1 AUTHORS
+
+=over 4
+
+=item *
+
+Shawn M Moore <code@sartak.org>
+
+=item *
+
+Stefan O'Rear <stefanor@cox.net>
+
+=back
+
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2007-2009 Shawn M Moore.
+This software is copyright (c) 2013 by Shawn M Moore.
 
-This program is free software; you can redistribute it and/or modify it
-under the same terms as Perl itself.
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
 
 =cut
-

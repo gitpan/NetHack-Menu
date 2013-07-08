@@ -1,5 +1,10 @@
 Revision history for NetHack-Menu
 
+0.08    2013-07-08
+        $menu->selected_items
+        Avoid sending spurious ^
+        dzilify
+
 0.07    Sun Jun 30 2013
         Complete refactor.
             Your code will have to adjust for NetHack::Menu::Item instances

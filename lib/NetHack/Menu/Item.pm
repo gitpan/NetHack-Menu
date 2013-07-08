@@ -1,4 +1,10 @@
 package NetHack::Menu::Item;
+BEGIN {
+  $NetHack::Menu::Item::AUTHORITY = 'cpan:SARTAK';
+}
+{
+  $NetHack::Menu::Item::VERSION = '0.08';
+}
 use Moose;
 use Moose::Util::TypeConstraints;
 
@@ -100,5 +106,42 @@ sub commit {
     confess "Internal inconsistency problem in NetHack::Menu::Item! " . $self->dump;
 }
 
+
 1;
 
+__END__
+
+=pod
+
+=head1 NAME
+
+NetHack::Menu::Item
+
+=head1 VERSION
+
+version 0.08
+
+=for Pod::Coverage commit
+
+=head1 AUTHORS
+
+=over 4
+
+=item *
+
+Shawn M Moore <code@sartak.org>
+
+=item *
+
+Stefan O'Rear <stefanor@cox.net>
+
+=back
+
+=head1 COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2013 by Shawn M Moore.
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
+=cut
